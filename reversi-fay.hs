@@ -154,24 +154,29 @@ addClickEventAll board_ref func = do
   forM_ [0..7] $ \x->
     forM_ [0..7] $ \y->
       addClickEvent ("s"++(posToString (x,y))) $ func board_ref (x,y)
+
 getCpuFlag :: Fay Bool
 getCpuFlag = ffi "document.getElementById('cpu').checked"
 
 getClickEvent board_ref pos = do
   (board,disk) <- get board_ref
   let p' =next board disk
-  (b,nd) <- case  p' of
-    [] -> return (board,ndisk disk)
+  (b,nd,retry) <- case  p' of
+    [] -> return (board,ndisk disk,False)
     _  -> do
       if (filter (==pos) p')==[] 
-        then return (board,disk)
+        then return (board,disk,True)
         else do
           let b=put board disk pos
-          return (b,ndisk disk)
-  set board_ref (b,nd)
-  showBoard b nd
-  flg <- getCpuFlag
-  if flg then cpuEvent board_ref else return ()
+          return (b,ndisk disk,False)
+  if not retry
+    then do
+      set board_ref (b,nd)
+      showBoard b nd
+      flg <- getCpuFlag
+      if flg then cpuEvent board_ref else return ()
+    else return ()
+      
 
 
 cpuEvent board_ref = do
